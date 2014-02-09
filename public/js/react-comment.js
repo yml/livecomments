@@ -1,3 +1,4 @@
+var converter = new Showdown.converter();
 var CommentBox = React.createClass({
     render: function () {
         return (
@@ -25,22 +26,25 @@ var CommentList = React.createClass({
                     children: "This is one comment"}),
                 Comment({
                     author:"Jordan Walke",
-                    children: "This is an other comment"})
+                    children: "This is *another* comment"})
                 ));
     }
 });
 
 var Comment = React.createClass({
     render : function() {
+        var htmlComment = converter.makeHtml(this.props.children.toString());
         return (
             React.DOM.div({
                     className: "comment",
                 },
                 React.DOM.h2({
-                    className: "commentAuthor",
-                },
-                this.props.author),
-                this.props.children));
+                        className: "commentAuthor",
+                    },
+                    this.props.author),
+                    React.DOM.span({
+                            dangerouslySetInnerHTML:{__html:htmlComment}
+                        })));
     }
 });
 
