@@ -1,4 +1,10 @@
+var data = [
+  {author:"Pete Hunt", text:"This is one comment"},
+  {author: "Jordan Walke", text: "This is *another* comment"}
+];
+
 var converter = new Showdown.converter();
+
 var CommentBox = React.createClass({
     render: function () {
         return (
@@ -8,25 +14,23 @@ var CommentBox = React.createClass({
                 },
                 "Hello, world! I am a ",
                 React.DOM.strong(null, "commentbox"),
-                CommentList({}),
+                CommentList({data: this.props.data}),
                 CommentForm({})));
     }
 });
 
 var CommentList = React.createClass({
     render: function() {
+        var commentNodes = this.props.data.map(function (item, index) {
+            return Comment({key: index, author: item.author, children: item.text});
+        });
         return (
             React.DOM.div({
                     className: "commentList",
                 },
                 "Hello, world! I am a ",
                 React.DOM.strong(null, "CommentList"),
-                Comment({
-                    author:"Pete Hunt",
-                    children: "This is one comment"}),
-                Comment({
-                    author:"Jordan Walke",
-                    children: "This is *another* comment"})
+                commentNodes
                 ));
     }
 });
@@ -61,6 +65,6 @@ var CommentForm = React.createClass({
 });
 
 React.renderComponent(
-  CommentBox({}),
+  CommentBox({data: data}),
   document.getElementById('content')
 );

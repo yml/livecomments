@@ -1,11 +1,17 @@
 /** @jsx React.DOM */
+var data = [
+  {author:"Pete Hunt", text:"This is one comment"},
+  {author: "Jordan Walke", text: "This is *another* comment"}
+];
+
+
 var converter = new Showdown.converter();
 var CommentBox = React.createClass({
 	render: function () {
 		return (
 			<div className="commentBox">
 				Hello world! I am a <strong>commentbox</strong>.
-				<CommentList/>
+				<CommentList data={this.props.data} />
 				<CommentForm/>
 			</div>
 		)
@@ -14,11 +20,13 @@ var CommentBox = React.createClass({
 
 var CommentList = React.createClass({
 	render: function() {
+        var commentNodes = this.props.data.map(function (item, index) {
+            return <Comment key={index} author={item.author}>{item.text}</Comment>;
+        });
 		return (
 			<div className="commentList">
 				Hello, world! I am a <strong>CommentList</strong>.
-                <Comment author="Pete Hunt">This is one comment</Comment>
-                <Comment author="Jordan Walke">This is *another* comment</Comment>
+                {commentNodes}
 			</div>
 		);
 	}
@@ -50,6 +58,6 @@ var Comment = React.createClass({
 });
 
 React.renderComponent(
-  CommentBox({}),
+  CommentBox({data:data}),
   document.getElementById('content')
 );
