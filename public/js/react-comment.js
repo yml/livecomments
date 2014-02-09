@@ -7,10 +7,8 @@ var CommentBox = React.createClass({
             url: this.props.url,
             dataType: "json",
             success: function(data) {
-                console.log("fetching data ...");
                 instance.setState({data: data});
             }
-
        });
     },
 	getInitialState: function(){
@@ -81,7 +79,7 @@ var CommentForm = React.createClass({
 React.renderComponent(
     CommentBox({
         url: "/data/comments.json",
-        pollInterval: 1000
+        pollInterval: 5000
     }),
     document.getElementById('content')
 );
