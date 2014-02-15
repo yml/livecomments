@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"time"
 
 	"github.com/codegangsta/martini"
@@ -17,11 +16,7 @@ type Comment struct {
 func (c *Comment) Id() string    { return c.id }
 func (c *Comment) Event() string { return "comment" }
 func (c *Comment) Data() string {
-	b, err := json.Marshal(c)
-	if err != nil {
-		log.Fatal("An error occured while trying to marshal the comment", err)
-	}
-	log.Println("DEBUG: data", string(b))
+	b, _ := json.Marshal(c)
 	return string(b)
 }
 
@@ -35,7 +30,6 @@ func newRepo(srv *eventsource.Server) *eventsource.SliceRepository {
 	repo := eventsource.NewSliceRepository()
 	srv.Register("comments", repo)
 	for i := range comments {
-		log.Println("DEBUG: comment index", i)
 		repo.Add("comments", &comments[i])
 	}
 	return repo
