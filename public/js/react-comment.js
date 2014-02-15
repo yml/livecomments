@@ -50,13 +50,11 @@
         render: function () {
             return (
                 React.DOM.div(
-                    {
-                        className: "CommentBox",
-                    },
-                    "Hello, world! I am a ",
-                    React.DOM.strong(null, "commentbox"),
+                    {className: "CommentBox"},
                     CommentList({data: this.state.data}),
-                    CommentForm({postComment: this.postComment})));
+                    CommentForm({postComment: this.postComment})
+                )
+            );
         }
     });
 
@@ -65,14 +63,7 @@
             var commentNodes = this.props.data.map(function (item, index) {
                 return Comment({key: index, author: item.Author, children: item.Text});
             });
-            return (
-                React.DOM.div({
-                        className: "commentList",
-                    },
-                    "Hello, world! I am a ",
-                    React.DOM.strong(null, "CommentList"),
-                    commentNodes
-                    ));
+            return (React.DOM.div({className: "commentList"}, commentNodes));
         }
     });
 
@@ -80,16 +71,14 @@
         render : function() {
             var htmlComment = converter.makeHtml(this.props.children.toString());
             return (
-                React.DOM.div({
-                        className: "comment",
-                    },
-                    React.DOM.h2({
-                            className: "commentAuthor",
-                        },
+                React.DOM.div(
+                    {className: "comment"},
+                    React.DOM.h2(
+                        { className: "commentAuthor"},
                         this.props.author),
-                        React.DOM.span({
-                                dangerouslySetInnerHTML:{__html:htmlComment}
-                            })));
+                    React.DOM.span({dangerouslySetInnerHTML:{__html:htmlComment}})
+                )
+            );
         }
     });
 
@@ -100,7 +89,6 @@
             if (!author || !text){
                 return event.preventDefault();
             }
-            // Post the data
             this.props.postComment({author: author, text: text});
             this.refs.author.getDOMNode().value = '';
             this.refs.text.getDOMNode().value = '';
