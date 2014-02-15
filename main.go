@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/codegangsta/martini"
@@ -9,22 +11,34 @@ import (
 )
 
 type Comment struct {
-	id           string
+	Idx          string
 	Author, Text string
 }
 
-func (c *Comment) Id() string    { return c.id }
+func (c *Comment) Id() string    { return c.Idx }
 func (c *Comment) Event() string { return "comment" }
 func (c *Comment) Data() string {
 	b, _ := json.Marshal(c)
 	return string(b)
 }
 
-var comments = []Comment{
-	{"11", "yml", "Governments struggle to control global price of gas"},
-	{"12", "marco", "Tomorrow is another day"},
-	{"13", "martin", "News for news' sake"},
+type IdGenerator struct {
+	val int
 }
+
+func (idg *IdGenerator) Next() int {
+	idg.val += 1
+	return idg.val
+}
+
+var (
+	idx      = IdGenerator{}
+	comments = []Comment{
+		{strconv.Itoa(idx.Next()), "yml", "Governments struggle to control global price of gas"},
+		{strconv.Itoa(idx.Next()), "marco", "Tomorrow is another day"},
+		{strconv.Itoa(idx.Next()), "martin", "News for news' sake"},
+	}
+)
 
 func newRepo(srv *eventsource.Server) *eventsource.SliceRepository {
 	repo := eventsource.NewSliceRepository()
@@ -37,8 +51,7 @@ func newRepo(srv *eventsource.Server) *eventsource.SliceRepository {
 
 func replayRepo(srv *eventsource.Server, repo *eventsource.SliceRepository) {
 	for {
-		// Hard coding the replay from 12
-		for event := range repo.Replay("comments", "12") {
+		for event := range repo.Replay("comments", "2") {
 			srv.Publish([]string{"comments"}, event)
 		}
 		<-time.After(time.Second * 5)
@@ -52,9 +65,19 @@ func main() {
 	go replayRepo(srv, repo)
 
 	m := martini.Classic()
+
 	m.Get("/hello", func() string {
 		return "Hello world!"
 	})
+
+	m.Post("/comments", func(req *http.Request) string {
+		author, text := req.FormValue("author"), req.FormValue("text")
+		cmt := &Comment{strconv.Itoa(idx.Next()), author, text}
+		repo.Add("comments", cmt)
+		b, _ := json.Marshal(cmt)
+		return string(b)
+	})
+
 	m.Get("/eventsource", srv.Handler("comments"))
 	m.Run()
 }
