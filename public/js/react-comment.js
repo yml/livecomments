@@ -23,7 +23,7 @@
         postComment: function(comment) {
             console.log("Post the comment to the backend" + comment);
             $.ajax({
-                url: this.props.post_url,
+                url: this.props.url,
                 dataType: 'json',
                 type: 'POST',
                 data: comment,
@@ -108,8 +108,7 @@
 
     React.renderComponent(
         CommentBox({
-            url: "/data/comments.json",
-            post_url: "/comments",
+            url: "/comments",
             eventsource_url: "/eventsource",
         }),
         document.getElementById('content')

@@ -34,8 +34,8 @@ func (idg *IdGenerator) Next() int {
 var (
 	idx      = IdGenerator{}
 	comments = []Comment{
-		{strconv.Itoa(idx.Next()), "yml", "Governments struggle to control global price of gas"},
-		{strconv.Itoa(idx.Next()), "marco", "Tomorrow is another day"},
+		{strconv.Itoa(idx.Next()), "yml", "Governments **struggle** to control global price of gas"},
+		{strconv.Itoa(idx.Next()), "marco", "Tomorrow is _another_ day"},
 		{strconv.Itoa(idx.Next()), "martin", "News for news' sake"},
 	}
 )
@@ -51,10 +51,10 @@ func newRepo(srv *eventsource.Server) *eventsource.SliceRepository {
 
 func replayRepo(srv *eventsource.Server, repo *eventsource.SliceRepository) {
 	for {
-		for event := range repo.Replay("comments", "2") {
-			srv.Publish([]string{"comments"}, event)
+		for cmt := range repo.Replay("comments", "2") {
+			srv.Publish([]string{"comments"}, cmt)
 		}
-		<-time.After(time.Second * 5)
+		<-time.After(time.Second * 10)
 	}
 }
 
@@ -66,14 +66,15 @@ func main() {
 
 	m := martini.Classic()
 
-	m.Get("/hello", func() string {
-		return "Hello world!"
+	m.Get("/comments", func() string {
+		b, _ := json.Marshal(comments)
+		return string(b)
 	})
-
 	m.Post("/comments", func(req *http.Request) string {
 		author, text := req.FormValue("author"), req.FormValue("text")
 		cmt := &Comment{strconv.Itoa(idx.Next()), author, text}
 		repo.Add("comments", cmt)
+		srv.Publish([]string{"comments"}, cmt)
 		b, _ := json.Marshal(cmt)
 		return string(b)
 	})
