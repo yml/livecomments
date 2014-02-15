@@ -1,10 +1,9 @@
 (function (){
 	use = "strict";
-	var source = new EventSource("/eventsource/");
 	var converter = new Showdown.converter();
 	
 	var CommentBox = React.createClass({
-		loadComments: function() {
+		loadInitialData: function() {
 			$.ajax({
 				url: this.props.url,
 				dataType: "json",
@@ -14,7 +13,7 @@
 		   })
 		},
 		
-		updateComments: function(comment) {
+		updateData: function(comment) {
 			if (this.state.data.map(function(item) {return item.Id}).indexOf(comment.Id) === -1){
 				this.state.data.push(comment);
 				this.setState({data: this.state.data});
@@ -22,12 +21,12 @@
 		},
 		
 		getInitialState: function(){
-			return {data: []};
+			return {data: [], source: new EventSource(this.props.eventsource_url)};
 		},
 		
 		componentWillMount: function() {
 			this.loadComments();
-			source.addEventListener('comment', function(e) {
+			this.state.source.addEventListener('comment', function(e) {
 				var cmt = JSON.parse(e.data);
 				cmt.Id = e.lastEventId;
 				this.updateComments(cmt);
@@ -96,6 +95,7 @@
 	React.renderComponent(
 		CommentBox({
 			url: "/data/comments.json",
+			eventsource_url: "/eventsource",
 			pollInterval: 5000
 		}),
 		document.getElementById('content')
