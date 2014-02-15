@@ -25,11 +25,11 @@
 		},
 		
 		componentWillMount: function() {
-			this.loadComments();
+			this.loadInitialData();
 			this.state.source.addEventListener('comment', function(e) {
 				var cmt = JSON.parse(e.data);
 				cmt.Id = e.lastEventId;
-				this.updateComments(cmt);
+				this.updateData(cmt);
 			}.bind(this), false);
 			
 		},
