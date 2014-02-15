@@ -55,6 +55,6 @@ func main() {
 	m.Get("/hello", func() string {
 		return "Hello world!"
 	})
-	m.Any("/eventsource", srv.Handler("comments"))
+	m.Get("/eventsource", srv.Handler("comments"))
 	m.Run()
 }
