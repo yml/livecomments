@@ -40,6 +40,9 @@ var (
 	}
 )
 
+// This use slice repository which is fine for this example but if you handle
+// a massive volume of events you might want to move to something that will
+// not grow in memory without limit.
 func newRepo(srv *eventsource.Server) *eventsource.SliceRepository {
 	repo := eventsource.NewSliceRepository()
 	srv.Register("comments", repo)
@@ -49,10 +52,10 @@ func newRepo(srv *eventsource.Server) *eventsource.SliceRepository {
 	return repo
 }
 
-func replayRepo(srv *eventsource.Server, repo *eventsource.SliceRepository) {
+func replayLastMessages(n int, srv *eventsource.Server) {
 	for {
-		for cmt := range repo.Replay("comments", "2") {
-			srv.Publish([]string{"comments"}, cmt)
+		for _, cmt := range comments[len(comments)-n:] {
+			srv.Publish([]string{"comments"}, &cmt)
 		}
 		<-time.After(time.Second * 10)
 	}
@@ -62,14 +65,17 @@ func main() {
 	srv := eventsource.NewServer()
 	defer srv.Close()
 	repo := newRepo(srv)
-	go replayRepo(srv, repo)
+	go replayLastMessages(3, srv)
 
 	m := martini.Classic()
 
+	// Api endpoint that returns a json string with all the comments
 	m.Get("/comments", func() string {
 		b, _ := json.Marshal(comments)
 		return string(b)
 	})
+
+	// Api endpoint to create new comments
 	m.Post("/comments", func(req *http.Request) string {
 		author, text := req.FormValue("author"), req.FormValue("text")
 		cmt := &Comment{strconv.Itoa(idx.Next()), author, text}
@@ -79,6 +85,7 @@ func main() {
 		return string(b)
 	})
 
+	// eventsource endpoint
 	m.Get("/eventsource", srv.Handler("comments"))
 	m.Run()
 }
