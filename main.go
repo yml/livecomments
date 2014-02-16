@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -31,62 +32,98 @@ func (idg *IdGenerator) Next() int {
 	return idg.val
 }
 
-var (
-	idx      = IdGenerator{}
-	comments = []Comment{
-		{strconv.Itoa(idx.Next()), "yml", "Governments **struggle** to control global price of gas"},
-		{strconv.Itoa(idx.Next()), "marco", "Tomorrow is _another_ day"},
-		{strconv.Itoa(idx.Next()), "martin", "News for news' sake"},
-	}
-)
-
-// This use slice repository which is fine for this example but if you handle
-// a massive volume of events you might want to move to something that will
-// not grow in memory without limit.
-func newRepo(srv *eventsource.Server) *eventsource.SliceRepository {
-	repo := eventsource.NewSliceRepository()
-	srv.Register("comments", repo)
-	for i := range comments {
-		repo.Add("comments", &comments[i])
-	}
-	return repo
+type Channel struct {
+	Name string
+	Data []Comment
+	Repo *eventsource.SliceRepository
 }
 
-func replayLastMessages(n int, srv *eventsource.Server) {
+func (c *Channel) Add(cmt *Comment) {
+	c.Data = append(c.Data, *cmt)
+	c.Repo.Add(c.Name, cmt)
+}
+
+// This uses SliceRepository which is fine for this example but if you handle
+// a massive volume of events you might want to move to something that will
+// not grow in memory without limit.
+func NewChannel(name string, srv *eventsource.Server) *Channel {
+	channel := Channel{
+		name,
+		[]Comment{},
+		eventsource.NewSliceRepository()}
+	srv.Register(channel.Name, channel.Repo)
+	return &channel
+}
+
+var (
+	channels = make(map[string]*Channel)
+	idx      = IdGenerator{}
+)
+
+func replayLastMessages(n int, channel *Channel, srv *eventsource.Server) {
 	for {
-		for _, cmt := range comments[len(comments)-n:] {
-			srv.Publish([]string{"comments"}, &cmt)
+		data := channel.Data
+		for i := range data[len(data)-n:] {
+			srv.Publish([]string{channel.Name}, &data[i])
 		}
-		<-time.After(time.Second * 10)
+		<-time.After(time.Second * 5)
 	}
 }
 
 func main() {
 	srv := eventsource.NewServer()
 	defer srv.Close()
-	repo := newRepo(srv)
-	go replayLastMessages(3, srv)
 
+	sample := []Comment{
+		{strconv.Itoa(idx.Next()), "yml", "Governments **struggle** to control global price of gas"},
+		{strconv.Itoa(idx.Next()), "marco", "Tomorrow is _another_ day"},
+		{strconv.Itoa(idx.Next()), "martin", "News for news' sake"},
+	}
+	// populate the sample channel with initial data
+	channels["sample"] = NewChannel("sample", srv)
+	for i := range sample {
+		channels["sample"].Add(&sample[i])
+	}
+
+	// go replayLastMessages(2, channels["sample"], srv)
 	m := martini.Classic()
 
 	// Api endpoint that returns a json string with all the comments
-	m.Get("/comments", func() string {
-		b, _ := json.Marshal(comments)
+	m.Get("/:channel", func(params martini.Params) string {
+		channel, ok := channels[params["channel"]]
+		if !ok {
+			channel = NewChannel(params["channel"], srv)
+			channels[params["channel"]] = channel
+		}
+		b, err := json.Marshal(channel.Data)
+		if err != nil {
+			log.Println("DEBUG channel.Data", channel.Data)
+			log.Println("DEBUG err", err)
+		}
 		return string(b)
 	})
 
 	// Api endpoint to create new comments
-	m.Post("/comments", func(req *http.Request) string {
+	m.Post("/:channel", func(req *http.Request, params martini.Params) string {
+		channel, ok := channels[params["channel"]]
+		if !ok {
+			channel = NewChannel(params["channel"], srv)
+			channels[params["channel"]] = channel
+		}
 		author, text := req.FormValue("author"), req.FormValue("text")
 		cmt := Comment{strconv.Itoa(idx.Next()), author, text}
-		comments = append(comments, cmt)
-		repo.Add("comments", &cmt)
-		srv.Publish([]string{"comments"}, &cmt)
+		log.Println("DEBUG post cmt", cmt)
+		channel.Add(&cmt)
+		log.Println("DEBUG channel.Data", channel.Data)
+		srv.Publish([]string{channel.Name}, &cmt)
+		log.Println("DEBUG afer srv.Publish")
 		b, _ := json.Marshal(&cmt)
 		return string(b)
 	})
 
-	// eventsource endpoint
-	m.Get("/eventsource", srv.Handler("comments"))
+	// eventsource endpoints
+	m.Get("/:channel/eventsource", func(w http.ResponseWriter, req *http.Request, params martini.Params) {
+		srv.Handler(params["channel"])(w, req)
+	})
 	m.Run()
 }

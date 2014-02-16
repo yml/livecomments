@@ -35,7 +35,8 @@
         },
 
         getInitialState: function(){
-            return {data: [], source: new EventSource(this.props.eventsource_url)};
+			var eventsource_url = this.props.url+"/eventsource";
+            return {data: [], source: new EventSource(eventsource_url)};
         },
 
         componentWillMount: function() {
@@ -107,8 +108,7 @@
 
     React.renderComponent(
         CommentBox({
-            url: "/comments",
-            eventsource_url: "/eventsource",
+            url: "/sample",
         }),
         document.getElementById('content')
     );
