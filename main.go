@@ -78,10 +78,11 @@ func main() {
 	// Api endpoint to create new comments
 	m.Post("/comments", func(req *http.Request) string {
 		author, text := req.FormValue("author"), req.FormValue("text")
-		cmt := &Comment{strconv.Itoa(idx.Next()), author, text}
-		repo.Add("comments", cmt)
-		srv.Publish([]string{"comments"}, cmt)
-		b, _ := json.Marshal(cmt)
+		cmt := Comment{strconv.Itoa(idx.Next()), author, text}
+		comments = append(comments, cmt)
+		repo.Add("comments", &cmt)
+		srv.Publish([]string{"comments"}, &cmt)
+		b, _ := json.Marshal(&cmt)
 		return string(b)
 	})
 

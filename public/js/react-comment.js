@@ -90,7 +90,6 @@
                 return event.preventDefault();
             }
             this.props.postComment({author: author, text: text});
-            this.refs.author.getDOMNode().value = '';
             this.refs.text.getDOMNode().value = '';
             return event.preventDefault();
         },
