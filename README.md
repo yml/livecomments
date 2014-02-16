@@ -3,7 +3,7 @@ livecomments
 
 This is a toy application inspired by the [react tutorial](http://facebook.github.io/react/docs/tutorial.html). 
 Front end uses react.
-Backend uses GO, the realtime endpoint is built on eventsource.
+Backend uses GO, the realtime endpoint is built on eventsource. 
 
 
 ## Install 
@@ -11,6 +11,7 @@ Backend uses GO, the realtime endpoint is built on eventsource.
 
 ```
 go get github.com/yml/livecomments
+go install github.com/yml/livecomments
 ```
 
 
