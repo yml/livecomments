@@ -5,7 +5,7 @@
     var CommentBox = React.createClass({
         loadInitialData: function() {
             $.ajax({
-                url: this.props.url,
+                url: this.state.url,
                 dataType: "json",
                 success: function(data) {
                     this.setState({data: data});
@@ -23,7 +23,7 @@
         postComment: function(comment) {
             console.log("Post the comment to the backend" + comment);
             $.ajax({
-                url: this.props.url,
+                url: this.state.url,
                 dataType: 'json',
                 type: 'POST',
                 data: comment,
@@ -34,17 +34,37 @@
             });
         },
 
-        getInitialState: function(){
-			var eventsource_url = this.props.url+"/eventsource";
-            return {data: [], source: new EventSource(eventsource_url)};
+        getEventSource: function(){
+            return new EventSource(this.state.url+"/eventsource");
         },
 
-        componentWillMount: function() {
+
+
+        getInitialState: function(){
+            var url;
+            if (document.location.hash === "") {
+                // set the URL to the default channel
+                url = "/" + this.props.default_channel;
+            } else {
+                url = document.location.hash.replace('#', '/');
+            }
+            return {data: [], url: url};
+        },
+
+        componentDidMount: function() {
             this.loadInitialData();
-            this.state.source.addEventListener('comment', function(e) {
+            var source = this.getEventSource();
+            source.addEventListener('comment', function(e) {
                 var cmt = JSON.parse(e.data);
                 this.updateData(cmt);
             }.bind(this), false);
+            window.addEventListener(
+                "hashchange",
+                function() {
+                    var url = document.location.hash.replace('#', '/');
+                    this.setState({url: url});
+                }.bind(this),
+                false);
 
         },
 
@@ -107,9 +127,6 @@
     });
 
     React.renderComponent(
-        CommentBox({
-            url: "/sample",
-        }),
-        document.getElementById('content')
-    );
+        CommentBox({default_channel: "sample"}),
+        document.getElementById('content'));
 })();
