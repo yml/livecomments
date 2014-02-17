@@ -87,6 +87,16 @@ func main() {
 	// go replayLastMessages(2, channels["sample"], srv)
 	m := martini.Classic()
 
+	m.Get("/channels", func() string {
+		channelList := []string{}
+		for k, _ := range channels {
+			channelList = append(channelList, k)
+		}
+		b, _ := json.Marshal(channelList)
+		return string(b)
+
+	})
+
 	// Api endpoint that returns a json string with all the comments
 	m.Get("/:channel", func(params martini.Params) string {
 		channel, ok := channels[params["channel"]]

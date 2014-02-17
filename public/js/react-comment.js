@@ -2,16 +2,70 @@
     use = "strict";
     var converter = new Showdown.converter();
 
-    var CommentBox = React.createClass({
-        loadInitialData: function() {
+    var channelBox = React.createClass({
+        loadData: function() {
             $.ajax({
                 url: this.state.url,
                 dataType: "json",
                 success: function(data) {
                     this.setState({data: data});
                 }.bind(this)
-           });
+            });
         },
+
+        getInitialState: function() {
+            var url = "/channels";
+            return {data:[], url: url};
+        },
+
+        componentDidMount: function() {
+            window.setInterval(this.loadData, 10);
+        },
+
+        render: function() {
+            return (
+                React.DOM.div(
+                {className:"channelBox"},
+                ChannelList({data: this.state.data})
+                )
+            );
+        }
+    });
+
+    var ChannelList = React.createClass({
+        render: function() {
+            var channelNodes = this.props.data.map(function(item, index) {
+                return Channel({channelName: item});
+            });
+            return React.DOM.ul({className: "channelList"}, channelNodes);
+        }
+    });
+
+    var Channel = React.createClass({
+        render: function() {
+            return React.DOM.li(
+                {className: "channel"},
+                React.DOM.a(
+                    {href: document.location.pathname +"#"+this.props.channelName},
+                    this.props.channelName
+                )
+            );
+        }
+    });
+
+    var CommentBox = React.createClass({
+        loadInitialData: function(url) {
+            console.log("loadInitialData");
+            $.ajax({
+                url: url ? url : this.state.url,
+                dataType: "json",
+                success: function(data) {
+                    this.setState({data: data});
+                }.bind(this)
+            });
+
+        },
+
 
         updateData: function(comment) {
             if (this.state.data.map(function(item) {return item.Idx;}).indexOf(comment.Idx) === -1) {
@@ -21,7 +75,7 @@
         },
 
         postComment: function(comment) {
-            console.log("Post the comment to the backend" + comment);
+            console.log("postComment" + comment);
             $.ajax({
                 url: this.state.url,
                 dataType: 'json',
@@ -38,8 +92,6 @@
             return new EventSource(this.state.url+"/eventsource");
         },
 
-
-
         getInitialState: function(){
             var url;
             if (document.location.hash === "") {
@@ -52,7 +104,9 @@
         },
 
         componentDidMount: function() {
+            console.log("componentDidMount");
             this.loadInitialData();
+            console.log("componentWillUpdate");
             var source = this.getEventSource();
             source.addEventListener('comment', function(e) {
                 var cmt = JSON.parse(e.data);
@@ -61,11 +115,29 @@
             window.addEventListener(
                 "hashchange",
                 function() {
+                    console.log("hash changed in componentDidMount " + document.location.hash);
                     var url = document.location.hash.replace('#', '/');
-                    this.setState({url: url});
+                    this.setState({url: url, data:[]});
+                    this.loadInitialData(url);
                 }.bind(this),
                 false);
+        },
 
+        componentWillUpdate: function(nextProps) {
+            console.log("componentWillUpdate" , nextProps);
+        },
+        componentWillMount: function() {
+            console.log("componentWillMount");
+        },
+        
+        shouldComponentUpdate: function(nextProps, nextState){
+            //if (this.state. !== nextState)
+            console.log("shouldComponentUpdate");
+            return true;
+        },
+        
+        componentDidUpdate: function() {
+            console.log("componentDidUpdate");
         },
 
         render: function () {
@@ -126,7 +198,9 @@
         }
     });
 
+    React.renderComponent(channelBox(), document.getElementById('nav'));
     React.renderComponent(
         CommentBox({default_channel: "sample"}),
         document.getElementById('content'));
+
 })();
