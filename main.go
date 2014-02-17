@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -95,11 +94,7 @@ func main() {
 			channel = NewChannel(params["channel"], srv)
 			channels[params["channel"]] = channel
 		}
-		b, err := json.Marshal(channel.Data)
-		if err != nil {
-			log.Println("DEBUG channel.Data", channel.Data)
-			log.Println("DEBUG err", err)
-		}
+		b, _ := json.Marshal(channel.Data)
 		return string(b)
 	})
 
@@ -112,11 +107,8 @@ func main() {
 		}
 		author, text := req.FormValue("author"), req.FormValue("text")
 		cmt := Comment{strconv.Itoa(idx.Next()), author, text}
-		log.Println("DEBUG post cmt", cmt)
 		channel.Add(&cmt)
-		log.Println("DEBUG channel.Data", channel.Data)
 		srv.Publish([]string{channel.Name}, &cmt)
-		log.Println("DEBUG afer srv.Publish")
 		b, _ := json.Marshal(&cmt)
 		return string(b)
 	})
