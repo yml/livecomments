@@ -19,7 +19,7 @@
         },
 
         componentDidMount: function() {
-            window.setInterval(this.loadData, 10);
+            window.setInterval(this.loadData, 5000);
         },
 
         render: function() {
@@ -74,6 +74,7 @@
             }
         },
 
+
         postComment: function(comment) {
             console.log("postComment" + comment);
             $.ajax({
@@ -88,8 +89,16 @@
             });
         },
 
-        getEventSource: function(){
-            return new EventSource(this.state.url+"/eventsource");
+        sourceAddEventListener: function(url) {
+            console.log("source.addEventListener");
+            var eventsource_url = url ? url : this.state.url;
+            eventsource_url += "/eventsource";
+            console.log("eventsource_url " + eventsource_url);
+            this.source = new EventSource(eventsource_url);
+            this.source.addEventListener('comment', function(e) {
+                var cmt = JSON.parse(e.data);
+                this.updateData(cmt);
+            }.bind(this), false);
         },
 
         getInitialState: function(){
@@ -106,19 +115,16 @@
         componentDidMount: function() {
             console.log("componentDidMount");
             this.loadInitialData();
-            console.log("componentWillUpdate");
-            var source = this.getEventSource();
-            source.addEventListener('comment', function(e) {
-                var cmt = JSON.parse(e.data);
-                this.updateData(cmt);
-            }.bind(this), false);
+            this.sourceAddEventListener();
+
             window.addEventListener(
                 "hashchange",
                 function() {
-                    console.log("hash changed in componentDidMount " + document.location.hash);
+                    console.log("hash changed " + document.location.hash);
                     var url = document.location.hash.replace('#', '/');
                     this.setState({url: url, data:[]});
                     this.loadInitialData(url);
+                    this.sourceAddEventListener(url);
                 }.bind(this),
                 false);
         },
@@ -129,13 +135,13 @@
         componentWillMount: function() {
             console.log("componentWillMount");
         },
-        
+
         shouldComponentUpdate: function(nextProps, nextState){
             //if (this.state. !== nextState)
             console.log("shouldComponentUpdate");
             return true;
         },
-        
+
         componentDidUpdate: function() {
             console.log("componentDidUpdate");
         },
