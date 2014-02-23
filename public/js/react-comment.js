@@ -1,16 +1,34 @@
 (function (){
     use = "strict";
+
+    // getJSON fetch JSON data from the provided URL
+    var getJSON = function(url, successHandler, errorHandler) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('get', url, true);
+        xhr.responseType = 'json';
+        xhr.onload = function() {
+            var status = xhr.status;
+            if (status == 200 && successHandler) {
+                successHandler(xhr.response);
+            } else if (errorHandler) {
+                errorHandler(status);
+            }
+        };
+        xhr.send();
+    };
+
     var converter = new Showdown.converter();
 
     var channelBox = React.createClass({
         loadData: function() {
-            $.ajax({
-                url: this.state.url,
-                dataType: "json",
-                success: function(data) {
+            getJSON(
+                "/channels",
+                function(data){
                     this.setState({data: data});
-                }.bind(this)
-            });
+                }.bind(this),
+                function(status){
+                    console.log(status);
+                });
         },
 
         getInitialState: function() {
@@ -56,16 +74,16 @@
     var CommentBox = React.createClass({
         loadInitialData: function(url) {
             console.log("loadInitialData");
-            $.ajax({
-                url: url ? url : this.state.url,
-                dataType: "json",
-                success: function(data) {
+            getJSON(
+                url ? url : this.state.url,
+                function(data) {
                     this.setState({data: data});
-                }.bind(this)
-            });
-
+                }.bind(this),
+                function(status) {
+                    console.log("error", status);
+                }
+            );
         },
-
 
         updateData: function(comment) {
             if (this.state.data.map(function(item) {return item.Idx;}).indexOf(comment.Idx) === -1) {
@@ -77,23 +95,27 @@
 
         postComment: function(comment) {
             console.log("postComment" + comment);
-            $.ajax({
-                url: this.state.url,
-                dataType: 'json',
-                type: 'POST',
-                data: comment,
-                success: function(cmt) {
-                    //this.setState({data: data});
-                    this.updateData(cmt);
-                }.bind(this)
-            });
+            var xhr = new XMLHttpRequest();
+            xhr.open("post", this.state.url, true);
+            xhr.responseType = 'json';
+            xhr.onload = function() { 
+                if (xhr.status === 200) {
+                    this.updateData(xhr.response);
+                }
+            }.bind(this);
+            // Build the formData
+            var fd = new FormData();
+            for (var key in comment) {
+                fd.append(key, comment[key]);
+            }
+            // Send the FormData
+            xhr.send(fd);
         },
 
         sourceAddEventListener: function(url) {
             console.log("source.addEventListener");
             var eventsource_url = url ? url : this.state.url;
             eventsource_url += "/eventsource";
-            console.log("eventsource_url " + eventsource_url);
             this.source = new EventSource(eventsource_url);
             this.source.addEventListener('comment', function(e) {
                 var cmt = JSON.parse(e.data);
@@ -127,23 +149,6 @@
                     this.sourceAddEventListener(url);
                 }.bind(this),
                 false);
-        },
-
-        componentWillUpdate: function(nextProps) {
-            console.log("componentWillUpdate" , nextProps);
-        },
-        componentWillMount: function() {
-            console.log("componentWillMount");
-        },
-
-        shouldComponentUpdate: function(nextProps, nextState){
-            //if (this.state. !== nextState)
-            console.log("shouldComponentUpdate");
-            return true;
-        },
-
-        componentDidUpdate: function() {
-            console.log("componentDidUpdate");
         },
 
         render: function () {
