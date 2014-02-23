@@ -54,10 +54,19 @@ func NewChannel(name string, srv *eventsource.Server) *Channel {
 	return &channel
 }
 
-var (
-	channels = make(map[string]*Channel)
-	idx      = IdGenerator{}
-)
+type Network struct {
+	Channels map[string]*Channel
+	Repo     *eventsource.SliceRepository
+}
+
+func NewNetwork(srv *eventsource.Server) *Network {
+	network := Network{
+		Channels: make(map[string]*Channel),
+		Repo:     eventsource.NewSliceRepository()}
+	return &network
+}
+
+var idx = IdGenerator{}
 
 func replayLastMessages(n int, channel *Channel, srv *eventsource.Server) {
 	for {
@@ -71,6 +80,7 @@ func replayLastMessages(n int, channel *Channel, srv *eventsource.Server) {
 
 func main() {
 	srv := eventsource.NewServer()
+	network := NewNetwork(srv)
 	defer srv.Close()
 
 	sample := []Comment{
@@ -79,9 +89,9 @@ func main() {
 		{strconv.Itoa(idx.Next()), "martin", "News for news' sake"},
 	}
 	// populate the sample channel with initial data
-	channels["sample"] = NewChannel("sample", srv)
+	network.Channels["sample"] = NewChannel("sample", srv)
 	for i := range sample {
-		channels["sample"].Add(&sample[i])
+		network.Channels["sample"].Add(&sample[i])
 	}
 
 	// go replayLastMessages(2, channels["sample"], srv)
@@ -89,7 +99,7 @@ func main() {
 
 	m.Get("/channels", func() string {
 		channelList := []string{}
-		for k, _ := range channels {
+		for k, _ := range network.Channels {
 			channelList = append(channelList, k)
 		}
 		b, _ := json.Marshal(channelList)
@@ -99,10 +109,10 @@ func main() {
 
 	// Api endpoint that returns a json string with all the comments
 	m.Get("/:channel", func(params martini.Params) string {
-		channel, ok := channels[params["channel"]]
+		channel, ok := network.Channels[params["channel"]]
 		if !ok {
 			channel = NewChannel(params["channel"], srv)
-			channels[params["channel"]] = channel
+			network.Channels[params["channel"]] = channel
 		}
 		b, _ := json.Marshal(channel.Data)
 		return string(b)
@@ -110,10 +120,10 @@ func main() {
 
 	// Api endpoint to create new comments
 	m.Post("/:channel", func(req *http.Request, params martini.Params) string {
-		channel, ok := channels[params["channel"]]
+		channel, ok := network.Channels[params["channel"]]
 		if !ok {
 			channel = NewChannel(params["channel"], srv)
-			channels[params["channel"]] = channel
+			network.Channels[params["channel"]] = channel
 		}
 		author, text := req.FormValue("author"), req.FormValue("text")
 		cmt := Comment{strconv.Itoa(idx.Next()), author, text}
