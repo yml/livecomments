@@ -22,7 +22,7 @@
     var channelBox = React.createClass({
         loadInitialData: function() {
             getJSON(
-                this.state.url,
+                this.props.url,
                 function(data){
                     this.setState({data: data});
                 }.bind(this),
@@ -32,14 +32,12 @@
         },
 
         getInitialState: function() {
-            var url = "/channels";
-            return {data:[], url: url};
+            return {data:[]};
         },
 
-        sourceAddEventListener: function(url) {
+        sourceAddEventListener: function() {
             console.log("Channel: source.addEventListener");
-            var eventsource_url = url ? url : this.state.url;
-            eventsource_url += "/eventsource";
+            var eventsource_url = this.props.url + "/eventsource";
             this.source = new EventSource(eventsource_url);
             this.source.addEventListener('Channel Addition', function(e) {
                 var channel = JSON.parse(e.data);
@@ -48,7 +46,7 @@
         },
 
 		updateData: function(channel) {
-			if (this.state.data.map(function(item) {return item.Idx;}).indexOf(channel.Idx) === -1) {
+			if (this.state.data.indexOf(channel.Name) === -1) {
 				this.state.data.push(channel.Name);
 				this.setState({data: this.state.data});
 			}
@@ -111,7 +109,6 @@
                 this.setState({data: this.state.data});
             }
         },
-
 
         postComment: function(comment) {
             console.log("postComment" + comment);
@@ -229,9 +226,6 @@
         }
     });
 
-    React.renderComponent(channelBox(), document.getElementById('nav'));
-    React.renderComponent(
-        CommentBox({default_channel: "sample"}),
-        document.getElementById('content'));
-
+    React.renderComponent(channelBox({url: "/channels"}), document.getElementById('nav'));
+    React.renderComponent(CommentBox({default_channel: "sample"}), document.getElementById('content'));
 })();
