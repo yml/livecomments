@@ -20,9 +20,9 @@
     var converter = new Showdown.converter();
 
     var channelBox = React.createClass({
-        loadData: function() {
+        loadInitialData: function() {
             getJSON(
-                "/channels",
+                this.state.url,
                 function(data){
                     this.setState({data: data});
                 }.bind(this),
@@ -36,8 +36,28 @@
             return {data:[], url: url};
         },
 
+        sourceAddEventListener: function(url) {
+            console.log("Channel: source.addEventListener");
+            var eventsource_url = url ? url : this.state.url;
+            eventsource_url += "/eventsource";
+            this.source = new EventSource(eventsource_url);
+            this.source.addEventListener('Channel Addition', function(e) {
+                var channel = JSON.parse(e.data);
+                this.updateData(channel);
+            }.bind(this), false);
+        },
+
+		updateData: function(channel) {
+			if (this.state.data.map(function(item) {return item.Idx;}).indexOf(channel.Idx) === -1) {
+				this.state.data.push(channel.Name);
+				this.setState({data: this.state.data});
+			}
+		},
+
         componentDidMount: function() {
-            window.setInterval(this.loadData, 5000);
+			this.loadInitialData();
+			this.sourceAddEventListener();
+
         },
 
         render: function() {

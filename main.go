@@ -22,6 +22,17 @@ func (c *Comment) Data() string {
 	return string(b)
 }
 
+type ChannelAddition struct {
+	Idx, Name string
+}
+
+func (c *ChannelAddition) Id() string    { return c.Idx }
+func (c *ChannelAddition) Event() string { return "Channel Addition" }
+func (c *ChannelAddition) Data() string {
+	b, _ := json.Marshal(c)
+	return string(b)
+}
+
 type IdGenerator struct {
 	val int
 }
@@ -57,13 +68,22 @@ func NewChannel(name string, srv *eventsource.Server) *Channel {
 type Network struct {
 	Channels map[string]*Channel
 	Repo     *eventsource.SliceRepository
+	srv      *eventsource.Server
 }
 
 func NewNetwork(srv *eventsource.Server) *Network {
 	network := Network{
 		Channels: make(map[string]*Channel),
-		Repo:     eventsource.NewSliceRepository()}
+		Repo:     eventsource.NewSliceRepository(),
+		srv:      srv}
+	srv.Register("channels", network.Repo)
 	return &network
+}
+
+func (n *Network) AddChannel(channel *Channel) {
+	n.Channels[channel.Name] = channel
+	n.srv.Publish([]string{"channels"},
+		&ChannelAddition{channel.Name, channel.Name})
 }
 
 var idx = IdGenerator{}
@@ -112,7 +132,7 @@ func main() {
 		channel, ok := network.Channels[params["channel"]]
 		if !ok {
 			channel = NewChannel(params["channel"], srv)
-			network.Channels[params["channel"]] = channel
+			network.AddChannel(channel)
 		}
 		b, _ := json.Marshal(channel.Data)
 		return string(b)
@@ -123,7 +143,7 @@ func main() {
 		channel, ok := network.Channels[params["channel"]]
 		if !ok {
 			channel = NewChannel(params["channel"], srv)
-			network.Channels[params["channel"]] = channel
+			network.AddChannel(channel)
 		}
 		author, text := req.FormValue("author"), req.FormValue("text")
 		cmt := Comment{strconv.Itoa(idx.Next()), author, text}
